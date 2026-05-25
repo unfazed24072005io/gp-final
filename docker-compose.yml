@@ -1,0 +1,28 @@
+# ===========================================================================
+#  docker-compose.yml — run Greenpack Inspector anywhere with one command
+# ===========================================================================
+#  Usage:
+#     docker compose up --build
+#  Then open http://localhost:8000
+#
+#  This gives you the FULL feature set (OCR ara+eng, PDF, barcode) because the
+#  Docker image installs the system libraries.
+# ===========================================================================
+services:
+  greenpack:
+    build: .
+    image: greenpack-inspector:latest
+    container_name: greenpack-inspector
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - GREENPACK_MAX_UPLOAD_MB=40
+      - GREENPACK_JOB_TTL=3600
+      - GREENPACK_CORS=*
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

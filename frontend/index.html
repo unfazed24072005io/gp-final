@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Greenpack Inspector — Pre-Press QC</title>
+<style>
+  :root{
+    --navy:#0D1B2A; --navy2:#16263A; --cyan:#00C2CB; --cyan-dim:#0a8a90;
+    --green:#16A34A; --red:#DC2626; --amber:#D97706;
+    --ink:#1e293b; --muted:#64748b; --line:#e2e8f0; --bg:#f1f5f9; --card:#ffffff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+
+  /* Header */
+  header{background:linear-gradient(120deg,var(--navy),var(--navy2));color:#fff;padding:20px 32px;
+    display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--cyan),#0891b2);
+    display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+  .brand h1{font-size:21px;font-weight:800;letter-spacing:.3px}
+  .brand p{font-size:12.5px;color:var(--cyan);font-weight:600}
+  .caps{display:flex;gap:8px;font-size:11px}
+  .cap{padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.08);display:flex;align-items:center;gap:5px}
+  .cap .dot{width:7px;height:7px;border-radius:50%}
+  .cap.on .dot{background:var(--green)} .cap.off .dot{background:#94a3b8}
+
+  .wrap{max-width:1180px;margin:28px auto;padding:0 24px}
+
+  /* Upload cards */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .drop{background:var(--card);border:2.5px dashed var(--line);border-radius:16px;padding:30px 20px;
+    text-align:center;cursor:pointer;transition:.2s;min-height:190px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:10px}
+  .drop:hover{border-color:var(--cyan);background:#f0fdff}
+  .drop.has{border-color:var(--green);border-style:solid;background:#f0fdf4}
+  .drop.drag{border-color:var(--cyan);background:#ecfeff;transform:scale(1.01)}
+  .drop .ic{font-size:42px}
+  .drop .lbl{font-weight:700;font-size:15px}
+  .drop .sub{font-size:12.5px;color:var(--muted)}
+  .drop .fname{font-size:13px;color:var(--green);font-weight:600;word-break:break-all}
+  .drop img.thumb{max-height:92px;border-radius:8px;border:1px solid var(--line);margin-top:4px}
+
+  /* Controls */
+  .controls{background:var(--card);border-radius:16px;padding:18px 22px;margin-bottom:18px;
+    display:flex;gap:26px;flex-wrap:wrap;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+  .ctrl{display:flex;flex-direction:column;gap:5px}
+  .ctrl label{font-size:12px;font-weight:700;color:var(--muted)}
+  .ctrl input[type=range]{width:160px;accent-color:var(--cyan)}
+  .ctrl .val{font-size:12px;color:var(--cyan);font-weight:700}
+
+  .btn{border:none;border-radius:12px;padding:14px 30px;font-size:16px;font-weight:800;cursor:pointer;
+    transition:.15s;display:inline-flex;align-items:center;gap:9px}
+  .btn-go{background:linear-gradient(135deg,var(--cyan),#0891b2);color:#fff;box-shadow:0 4px 16px rgba(8,145,178,.35)}
+  .btn-go:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(8,145,178,.45)}
+  .btn-go:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .center{text-align:center;margin:8px 0 22px}
+
+  /* Progress */
+  .progress-wrap{background:var(--card);border-radius:16px;padding:22px;margin-bottom:20px;display:none}
+  .progress-wrap.show{display:block}
+  .pbar{height:12px;background:#e2e8f0;border-radius:8px;overflow:hidden;margin:12px 0}
+  .pfill{height:100%;background:linear-gradient(90deg,var(--cyan),#0891b2);width:0%;transition:width .3s;border-radius:8px}
+  .pmsg{font-size:13.5px;color:var(--muted);font-weight:600}
+
+  /* Results */
+  .results{display:none}
+  .results.show{display:block}
+  .verdict{border-radius:18px;padding:26px 30px;color:#fff;margin-bottom:22px;display:flex;
+    align-items:center;gap:24px;box-shadow:0 6px 22px rgba(0,0,0,.12)}
+  .verdict.pass{background:linear-gradient(135deg,#16A34A,#15803d)}
+  .verdict.fail{background:linear-gradient(135deg,#DC2626,#b91c1c)}
+  .verdict .big{font-size:54px;font-weight:900;line-height:1}
+  .verdict .vt{font-size:26px;font-weight:800}
+  .verdict .vr{font-size:14px;opacity:.92;margin-top:4px}
+  .verdict .note{font-size:12.5px;opacity:.85;margin-top:7px;font-style:italic}
+
+  .scorebar{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-bottom:22px}
+  .scard{background:var(--card);border-radius:14px;padding:18px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .scard .num{font-size:30px;font-weight:900}
+  .scard .lab{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+
+  .panel{background:var(--card);border-radius:16px;padding:22px 24px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .panel h3{font-size:16px;color:var(--navy);margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid var(--cyan);
+    display:flex;align-items:center;gap:8px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{background:#f8fafc;font-weight:700;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  .imgrow{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.imgrow{grid-template-columns:1fr}}
+  .imgrow figure{margin:0}
+  .imgrow img{width:100%;border-radius:10px;border:1px solid var(--line)}
+  .imgrow figcaption{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;margin-top:10px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+
+  .badge{padding:3px 10px;border-radius:20px;font-size:11.5px;font-weight:700}
+  .b-ok{background:#dcfce7;color:#166534} .b-warn{background:#fef3c7;color:#92400e}
+  .b-off{background:#f1f5f9;color:#64748b} .b-bad{background:#fee2e2;color:#991b1b}
+
+  .dl{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:#fff;text-decoration:none;
+    padding:13px 26px;border-radius:12px;font-weight:700;font-size:14.5px;transition:.15s}
+  .dl:hover{background:var(--navy2)}
+  .err{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:16px 18px;border-radius:12px;
+    font-size:13.5px;display:none}
+  .err.show{display:block}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:24px}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">✓</div>
+    <div>
+      <h1>Greenpack Inspector</h1>
+      <p>Pre-press master vs sample inspection</p>
+    </div>
+  </div>
+  <div class="caps" id="caps"></div>
+</header>
+
+<div class="wrap">
+  <div class="err" id="err"></div>
+
+  <!-- Upload -->
+  <div class="grid2">
+    <div class="drop" id="dropM">
+      <div class="ic">📄</div>
+      <div class="lbl">Master (approved design)</div>
+      <div class="sub">Click or drop — PDF, PNG, JPG, TIFF</div>
+    </div>
+    <div class="drop" id="dropS">
+      <div class="ic">🖨️</div>
+      <div class="lbl">Sample (scanned proof)</div>
+      <div class="sub">Click or drop — PDF, PNG, JPG, TIFF</div>
+    </div>
+  </div>
+  <input type="file" id="fileM" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp" hidden>
+  <input type="file" id="fileS" accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.bmp,.webp" hidden>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl">
+      <label>Colour tolerance ΔE <span class="val" id="deVal">3.0</span></label>
+      <input type="range" id="deRange" min="0.5" max="6" step="0.1" value="3.0">
+    </div>
+    <div class="ctrl">
+      <label>SSIM threshold <span class="val" id="ssimVal">0.90</span></label>
+      <input type="range" id="ssimRange" min="0.7" max="0.99" step="0.01" value="0.90">
+    </div>
+    <div class="ctrl">
+      <label>Render DPI <span class="val" id="dpiVal">300</span></label>
+      <input type="range" id="dpiRange" min="150" max="600" step="50" value="300">
+    </div>
+  </div>
+
+  <div class="center">
+    <button class="btn btn-go" id="goBtn" disabled>▶ Start Inspection</button>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="prog">
+    <div class="pmsg" id="pmsg">Starting…</div>
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results"></div>
+</div>
+
+<footer>Greenpack Inspector v4.0 · offline pre-press quality control</footer>
+
+<script>
+const API = ""; // same origin
+let fileM=null, fileS=null;
+
+// ---- capabilities banner ----
+fetch(API+"/api/health").then(r=>r.json()).then(d=>{
+  const c=d.capabilities||{};
+  const items=[["ocr","OCR / Text"],["barcode","Barcode"],
+               ["pdf_fitz","PDF (fitz)"],["pdf_poppler","PDF (poppler)"]];
+  document.getElementById("caps").innerHTML = items.map(([k,lbl])=>
+    `<div class="cap ${c[k]?'on':'off'}"><span class="dot"></span>${lbl}</div>`).join("");
+}).catch(()=>{});
+
+// ---- file pickers + drag/drop ----
+function wireDrop(dropId, inputId, which){
+  const drop=document.getElementById(dropId), inp=document.getElementById(inputId);
+  drop.onclick=()=>inp.click();
+  inp.onchange=()=>{ if(inp.files[0]) setFile(which, inp.files[0], drop); };
+  ["dragover","dragenter"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.add("drag")}));
+  ["dragleave","drop"].forEach(e=>drop.addEventListener(e,ev=>{ev.preventDefault();drop.classList.remove("drag")}));
+  drop.addEventListener("drop",ev=>{ if(ev.dataTransfer.files[0]) setFile(which, ev.dataTransfer.files[0], drop); });
+}
+function setFile(which, file, drop){
+  if(which==="M") fileM=file; else fileS=file;
+  const isImg=/\.(png|jpe?g|tiff?|bmp|webp)$/i.test(file.name);
+  let thumb="";
+  if(isImg){ const url=URL.createObjectURL(file); thumb=`<img class="thumb" src="${url}">`; }
+  drop.classList.add("has");
+  drop.innerHTML=`<div class="ic">✅</div><div class="fname">${file.name}</div>`+thumb+
+    `<div class="sub">${(file.size/1024).toFixed(0)} KB — click to change</div>`;
+  document.getElementById("goBtn").disabled = !(fileM && fileS);
+}
+wireDrop("dropM","fileM","M"); wireDrop("dropS","fileS","S");
+
+// ---- sliders ----
+const de=document.getElementById("deRange"), ss=document.getElementById("ssimRange"), dp=document.getElementById("dpiRange");
+de.oninput=()=>document.getElementById("deVal").textContent=de.value;
+ss.oninput=()=>document.getElementById("ssimVal").textContent=ss.value;
+dp.oninput=()=>document.getElementById("dpiVal").textContent=dp.value;
+
+// ---- run ----
+document.getElementById("goBtn").onclick=async()=>{
+  const err=document.getElementById("err"); err.classList.remove("show");
+  document.getElementById("results").classList.remove("show");
+  document.getElementById("goBtn").disabled=true;
+  const prog=document.getElementById("prog"); prog.classList.add("show");
+  setProg(2,"Uploading…");
+
+  const fd=new FormData();
+  fd.append("master",fileM); fd.append("sample",fileS);
+  fd.append("delta_e_threshold",de.value);
+  fd.append("ssim_threshold",ss.value);
+  fd.append("dpi",dp.value);
+
+  try{
+    const r=await fetch(API+"/api/inspect",{method:"POST",body:fd});
+    if(!r.ok) throw new Error("Server rejected upload ("+r.status+")");
+    const {job_id}=await r.json();
+    poll(job_id);
+  }catch(e){ showErr(e.message); }
+};
+
+function setProg(pct,msg){
+  document.getElementById("pfill").style.width=pct+"%";
+  document.getElementById("pmsg").textContent=msg+" ("+pct+"%)";
+}
+function showErr(m){
+  const err=document.getElementById("err");
+  err.textContent="⚠ "+m; err.classList.add("show");
+  document.getElementById("prog").classList.remove("show");
+  document.getElementById("goBtn").disabled=false;
+}
+
+async function poll(jobId){
+  try{
+    const r=await fetch(API+"/api/result/"+jobId);
+    const d=await r.json();
+    if(d.status==="running"){ setProg(d.progress||5, d.message||"Working…"); setTimeout(()=>poll(jobId),600); }
+    else if(d.status==="error"){ showErr("Inspection failed: "+d.error); }
+    else if(d.status==="done"){ setProg(100,"Complete"); setTimeout(()=>render(jobId,d.result),300); }
+  }catch(e){ showErr(e.message); }
+}
+
+function badge(state,text){
+  const cls={ok:"b-ok",warn:"b-warn",off:"b-off",bad:"b-bad"}[state]||"b-off";
+  return `<span class="badge ${cls}">${text}</span>`;
+}
+
+function render(jobId,res){
+  document.getElementById("prog").classList.remove("show");
+  document.getElementById("goBtn").disabled=false;
+  const v=res.verdict, sc=res.scores, col=res.colour, txt=res.text,
+        ssim=res.ssim, ocr=res.ocr, bc=res.barcodes, mq=res.master_quality, sq=res.sample_quality;
+  const pass=v.pass;
+
+  let scoreCards="";
+  const colorFor=x=> x>=80?"var(--green)":x>=60?"var(--amber)":"var(--red)";
+  for(const k of ["overall","text","colour","ssim","barcode"]){
+    if(sc[k]===undefined) continue;
+    scoreCards+=`<div class="scard"><div class="num" style="color:${colorFor(sc[k])}">${sc[k]}</div>
+      <div class="lab">${k}</div></div>`;
+  }
+
+  // OCR rows
+  let ocrRows="";
+  if(ocr.available && ocr.errors && ocr.errors.length){
+    ocrRows = ocr.errors.slice(0,12).map(e=>
+      `<tr><td>${e.type}</td><td>${esc(e.master)||"—"}</td><td>${esc(e.sample)||"—"}</td></tr>`).join("");
+  }
+
+  const html=`
+  <div class="verdict ${pass?'pass':'fail'}">
+    <div class="big">${sc.overall}</div>
+    <div>
+      <div class="vt">${pass?'PASS ✓':'FAIL ✗'}</div>
+      <div class="vr">${esc(v.reasons.join("; "))}</div>
+      ${v.quality_note?`<div class="note">${esc(v.quality_note)}</div>`:""}
+    </div>
+  </div>
+
+  <div class="scorebar">${scoreCards}</div>
+
+  <div class="panel">
+    <h3>🎨 Visual Comparison</h3>
+    <div class="imgrow">
+      <figure><img src="${API}/api/overlay/${jobId}"><figcaption>Difference overlay</figcaption></figure>
+      <figure><img src="${API}/api/heatmap/${jobId}"><figcaption>Colour ΔE heatmap</figcaption></figure>
+    </div>
+    <div class="legend">
+      <span><i class="sw" style="background:#c8c8c8"></i>unchanged</span>
+      <span><i class="sw" style="background:#16A34A"></i>added in sample</span>
+      <span><i class="sw" style="background:#DC2626"></i>deleted from sample</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>📋 Check Details</h3>
+    <table>
+      <tr><th>Check</th><th>Result</th><th>Status</th></tr>
+      <tr><td>Colour accuracy</td>
+          <td>median ΔE ${col.median_delta_e}, max ${col.max_delta_e}, ${col.zone_failures}/${col.zone_count} zones out</td>
+          <td>${col.pass?badge("ok","PASS"):badge("warn","CHECK")}</td></tr>
+      <tr><td>Text — words/letters/dots</td>
+          <td>${txt.total} diffs (${txt.dots} dot-level, ${txt.missing} missing, ${txt.extra} extra)</td>
+          <td>${txt.total===0?badge("ok","PASS"):badge("warn",txt.total+" found")}</td></tr>
+      <tr><td>OCR words</td>
+          <td>${ocr.available?`${(ocr.errors||[]).length} mismatch(es) — ${esc(ocr.engine)}`:esc(ocr.note||"unavailable")}</td>
+          <td>${ocr.available?(ocr.errors.length?badge("warn","DIFF"):badge("ok","PASS")):badge("off","N/A")}</td></tr>
+      <tr><td>Structure (SSIM)</td>
+          <td>${ssim.ssim} — ${ssim.defects.length} defect(s)</td>
+          <td>${ssim.pass?badge("ok","PASS"):badge("warn","CHECK")}</td></tr>
+      <tr><td>Barcodes</td>
+          <td>${bc.available?(`master ${bc.master_count}, sample ${bc.sample_count}`):esc(bc.note||"unavailable")}</td>
+          <td>${bc.available?(bc.match?badge("ok","MATCH"):badge("bad","MISMATCH")):badge("off","N/A")}</td></tr>
+      <tr><td>Alignment confidence</td><td>${Math.round(res.alignment_confidence*100)}%</td>
+          <td>${res.alignment_confidence>0.5?badge("ok","OK"):badge("warn","LOW")}</td></tr>
+    </table>
+  </div>
+
+  ${ocrRows?`<div class="panel"><h3>🔤 OCR Text Mismatches</h3>
+    <table><tr><th>Type</th><th>Master</th><th>Sample</th></tr>${ocrRows}</table></div>`:""}
+
+  <div class="panel">
+    <h3>📥 Input Quality</h3>
+    <table>
+      <tr><th></th><th>Master</th><th>Sample</th></tr>
+      <tr><td>Grade</td><td>${mq.grade.toUpperCase()} (${mq.score}/100)</td><td>${sq.grade.toUpperCase()} (${sq.score}/100)</td></tr>
+      <tr><td>Sharpness</td><td>${mq.sharpness}</td><td>${sq.sharpness}</td></tr>
+    </table>
+    <p style="margin-top:10px;font-size:13px;color:var(--muted)"><i>${esc(sq.recommendation)}</i></p>
+  </div>
+
+  <div class="center">
+    ${res.report_available?`<a class="dl" href="${API}/api/report/${jobId}" target="_blank">📄 Download PDF Report</a>`:
+      `<span style="color:var(--muted)">PDF report unavailable</span>`}
+  </div>
+  `;
+  const rd=document.getElementById("results");
+  rd.innerHTML=html; rd.classList.add("show");
+  rd.scrollIntoView({behavior:"smooth"});
+}
+function esc(s){return (s==null?"":String(s)).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+</script>
+</body>
+</html>

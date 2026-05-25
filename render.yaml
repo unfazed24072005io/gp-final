@@ -1,0 +1,17 @@
+# render.yaml — one-click deploy to Render.com
+# In the Render dashboard: New > Blueprint > point at this repo.
+services:
+  - type: web
+    name: greenpack-inspector
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter            # 512MB is tight; use 'standard' for large scans
+    healthCheckPath: /healthz
+    envVars:
+      - key: GREENPACK_MAX_UPLOAD_MB
+        value: "40"
+      - key: GREENPACK_JOB_TTL
+        value: "3600"
+      - key: GREENPACK_CORS
+        value: "*"
+    autoDeploy: true

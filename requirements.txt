@@ -1,0 +1,39 @@
+# Greenpack Inspector v4.0 (Web App) — Python dependencies
+# Install:  pip install -r requirements.txt
+# Python 3.10–3.12 recommended.  (Python 3.14 is very new — prefer 3.12.)
+
+# ---- Web framework (REQUIRED) ----
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9      # file uploads
+
+# ---- Core image / numerical (REQUIRED) ----
+numpy>=1.24
+opencv-python>=4.8
+scikit-image>=0.21
+Pillow>=10.0
+
+# ---- Reporting (REQUIRED) ----
+reportlab>=4.0
+
+# ---- PDF input (OPTIONAL — at least one recommended) ----
+# The app reads PNG/JPG/TIFF with no extra deps. For PDF input install ONE of:
+PyMuPDF>=1.23                # 'fitz' — easiest, no system deps
+# pdf2image>=1.16            # alternative, needs poppler installed separately
+
+# ---- OCR (OPTIONAL — for naming words; pixel/dot text check works without it) ----
+pytesseract>=0.3.10          # needs Tesseract engine installed on the system
+
+# ---- Barcode (OPTIONAL — app NEVER crashes if missing) ----
+# pyzbar>=0.1.9              # needs the ZBar shared library (libzbar).
+                             # On Windows the wheel usually bundles it; if you see
+                             # "Could not find module libzbar-64.dll", either:
+                             #   - pip install pyzbar AND install the ZBar runtime, or
+                             #   - simply leave it out — barcode check is skipped safely.
+
+# ---------------------------------------------------------------------------
+# IMPORTANT: This version is CRASH-PROOF. If pyzbar/libzbar, Tesseract, or a PDF
+# engine is missing, that feature is skipped and clearly marked "N/A" in the UI
+# and report — the inspection still completes. (This fixes the libzbar-64.dll
+# crash from the desktop version.)
+# ---------------------------------------------------------------------------
